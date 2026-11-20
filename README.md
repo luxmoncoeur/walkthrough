@@ -23,7 +23,7 @@ Point Walkthrough at a GitHub repo and it builds an interactive, step-by-step to
 
 ## Stack
 
-- Next.js (App Router) + TypeScript
+- Next.js (App Router) + TypeScript (strict)
 - Tailwind CSS
 - Vercel AI SDK with Claude
 - GitHub REST API for repo contents
@@ -31,20 +31,32 @@ Point Walkthrough at a GitHub repo and it builds an interactive, step-by-step to
 
 ## Getting started
 
-The app isn't scaffolded yet, so there's nothing to run. Once it is, you'll need:
-
-- Node.js LTS and npm
-- An Anthropic API key, for generating tours
-- A GitHub personal access token (optional). It raises the GitHub API rate limit from 60 to 5,000 requests per hour.
-
-Both keys go in `.env.local`, which is gitignored:
+You'll need Node.js LTS and npm.
 
 ```bash
-ANTHROPIC_API_KEY=your-key
-GITHUB_TOKEN=your-token
+npm install
+cp .env.example .env.local   # then fill in the values
+npm run dev                  # http://localhost:3000
 ```
 
-Full install and run steps will be added with the scaffold.
+`.env.local` is gitignored. Only `.env.example` is committed.
+
+### Environment variables
+
+| Name | Required? | Purpose |
+| --- | --- | --- |
+| `GITHUB_TOKEN` | No | GitHub personal access token. Raises the GitHub API rate limit from 60 to 5,000 requests per hour. |
+| `ANTHROPIC_API_KEY` | Yes, for tour generation | Claude API key used to generate tours (not used by the skeleton yet). |
+
+## Screens
+
+| Route | Purpose |
+| --- | --- |
+| `/` | Home: one-line pitch and a GitHub repo URL input (placeholder form, no submit logic yet). |
+| `/tour/[owner]/[repo]` | Tour view: step list and code panel side by side on desktop, stacked on mobile. Placeholder steps for now. |
+| `/about` | How it works, in three steps. |
+| `/health` | Health check: live GitHub API rate limit (remaining / limit, reset time) and whether a token is configured. |
+| any unknown route | Custom 404 page. |
 
 ## License
 

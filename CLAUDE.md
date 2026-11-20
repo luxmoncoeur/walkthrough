@@ -14,12 +14,12 @@ Walkthrough generates interactive guided tours of a GitHub codebase. See README.
 - GitHub REST API for repo contents
 - Node.js LTS, npm
 
-## Structure (planned)
+## Structure
 
-- `app/`: routes and pages
-- `app/api/`: server routes (all AI and GitHub calls happen here, never in the browser)
-- `components/`: React components, one per file, PascalCase filenames
-- `lib/`: shared helpers (GitHub client, prompts, schemas)
+- `src/app/`: routes and pages
+- `src/app/api/`: server routes (all AI and GitHub calls happen here, never in the browser)
+- `src/components/`: React components, one per file, PascalCase filenames
+- `src/lib/`: shared helpers (GitHub client, prompts, schemas)
 
 ## Conventions
 
