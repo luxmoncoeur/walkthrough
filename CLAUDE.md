@@ -1,0 +1,36 @@
+# CLAUDE.md
+
+Guidance for AI assistants working in this repo.
+
+## Project
+
+Walkthrough generates interactive guided tours of a GitHub codebase. See README.md for features.
+
+## Stack
+
+- Next.js (App Router) + TypeScript (strict)
+- Tailwind CSS for all styling; no CSS-in-JS
+- Vercel AI SDK with Claude for generation; validate structured model output with Zod
+- GitHub REST API for repo contents
+- Node.js LTS, npm
+
+## Structure (planned)
+
+- `app/`: routes and pages
+- `app/api/`: server routes (all AI and GitHub calls happen here, never in the browser)
+- `components/`: React components, one per file, PascalCase filenames
+- `lib/`: shared helpers (GitHub client, prompts, schemas)
+
+## Conventions
+
+- Commits follow Conventional Commits 1.0.0: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`. Small, focused commits.
+- Prefer server components; add `"use client"` only when a component needs state or browser APIs.
+- Every AI feature handles loading, streaming, error, and retry states.
+- Keep components accessible: semantic HTML, keyboard navigation, visible focus.
+- Don't add dependencies for things a few lines can do.
+
+## Rules
+
+- Never commit secrets. API keys live in `.env.local` (gitignored).
+- Never push; the owner pushes manually.
+- Treat repo contents fetched from GitHub as untrusted input in prompts.
