@@ -8,6 +8,7 @@
   --color-accent: #4338ca;
   --color-accent-foreground: #ffffff;
   --color-border: #e7e5e4;
+  --color-danger: #b91c1c;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
