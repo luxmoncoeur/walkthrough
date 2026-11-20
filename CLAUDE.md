@@ -28,6 +28,9 @@ Walkthrough generates interactive guided tours of a GitHub codebase. See README.
 - Every AI feature handles loading, streaming, error, and retry states.
 - Keep components accessible: semantic HTML, keyboard navigation, visible focus.
 - Don't add dependencies for things a few lines can do.
+- Inputs that accept `owner/repo` shorthand use `type="text"` with `inputMode="url"`, never `type="url"` or a `pattern` attribute; forms with custom validation set `noValidate`.
+- Input validation lives in a pure function in `src/lib/` with a table-driven Vitest test that has one row per accepted and rejected example and asserts the exact error string.
+- Form errors render as inline text in an always-mounted `aria-live="polite"` element, linked to the field with `aria-describedby`, with `aria-invalid` on the field and focus returned to it; never rely on native validation bubbles, and never disable the submit button.
 
 ## Rules
 
