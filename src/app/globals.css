@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+/* Design tokens: components use these utilities (bg-background, text-muted, border-border, rounded-md...), never raw hex. */
+@theme inline {
+  --color-background: #fafaf9;
+  --color-foreground: #1c1917;
+  --color-muted: #57534e;
+  --color-accent: #4338ca;
+  --color-accent-foreground: #ffffff;
+  --color-border: #e7e5e4;
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
