@@ -31,7 +31,20 @@ Point Walkthrough at a GitHub repo and it builds an interactive, step-by-step to
 
 ## Getting started
 
-Setup instructions will be added once the app is scaffolded.
+The app isn't scaffolded yet, so there's nothing to run. Once it is, you'll need:
+
+- Node.js LTS and npm
+- An Anthropic API key, for generating tours
+- A GitHub personal access token (optional). It raises the GitHub API rate limit from 60 to 5,000 requests per hour.
+
+Both keys go in `.env.local`, which is gitignored:
+
+```bash
+ANTHROPIC_API_KEY=your-key
+GITHUB_TOKEN=your-token
+```
+
+Full install and run steps will be added with the scaffold.
 
 ## License
 
