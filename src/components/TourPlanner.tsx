@@ -7,6 +7,10 @@ import { DefaultChatTransport, type InferUITools, type UIDataTypes, type UIMessa
 import { OFFLINE, userMessage } from "@/lib/errors";
 import type { getRepoTree } from "@/lib/tools/getRepoTree";
 import type { planTour } from "@/lib/tools/planTour";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import CodePanel from "./CodePanel";
 import FileTree from "./FileTree";
 import TourSteps from "./TourSteps";
@@ -17,23 +21,18 @@ type TourMessage = UIMessage<
   InferUITools<{ getRepoTree: typeof getRepoTree; planTour: ReturnType<typeof planTour> }>
 >;
 
-const focusRing =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+const label = "text-label font-medium uppercase";
 
-function Skeleton() {
+function TreeSkeleton() {
   return (
     <div aria-hidden="true">
       <div className="flex gap-2">
-        <div className="h-5.5 w-16 rounded-full bg-border motion-safe:animate-pulse" />
-        <div className="h-5.5 w-28 rounded-full bg-border motion-safe:animate-pulse" />
+        <Skeleton className="h-5 w-16 rounded-4xl" />
+        <Skeleton className="h-5 w-28 rounded-4xl" />
       </div>
-      <div className="mt-3 h-72 space-y-2 rounded-md border border-border p-3">
+      <div className="mt-3 h-60 space-y-2.5 rounded-lg border bg-background/60 p-3 sm:h-72">
         {[60, 40, 75, 50, 35, 65, 45, 55].map((w, i) => (
-          <div
-            key={i}
-            className="h-4 rounded-sm bg-border motion-safe:animate-pulse"
-            style={{ width: `${w}%` }}
-          />
+          <Skeleton key={i} className="h-4" style={{ width: `${w}%` }} />
         ))}
       </div>
     </div>
@@ -54,20 +53,23 @@ function ErrorCard({
   focusRetry?: boolean;
 }) {
   return (
-    <div className="flex flex-col items-start justify-center gap-3 rounded-md border border-danger p-5">
-      <p className="font-medium text-danger">Something went wrong</p>
+    // Marked by the "Error" label and title, not just the red edge.
+    <Card className="items-start gap-3 border-l-4 border-destructive px-5 py-5">
+      <p className={`${label} text-destructive`}>Error</p>
+      <p className="font-heading font-semibold text-title">Something went wrong</p>
       <p className="text-sm break-words text-foreground">{message}</p>
-      {note && <p className="text-sm text-muted">{note}</p>}
-      <button
+      {note && <p className="text-sm text-muted-foreground">{note}</p>}
+      <Button
         type="button"
         onClick={onRetry}
         // After Stop, the Stop button unmounts; this keeps keyboard focus from falling to <body>.
         autoFocus={focusRetry}
-        className={`rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 ${focusRing}`}
+        size="lg"
+        className="mt-1"
       >
         {retryLabel}
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 }
 
@@ -191,44 +193,42 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
             : `Loaded ${tree!.totalFiles} files. Choosing where to start…`) + slowNote;
 
   return (
-    <div className="space-y-6">
-      <section aria-labelledby="tour-plan-heading" className="rounded-lg border border-border p-4">
-        <h2 id="tour-plan-heading" className="text-lg font-semibold">
+    <div className="space-y-10 sm:space-y-12">
+      <section
+        aria-labelledby="tour-plan-heading"
+        className="rounded-xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6"
+      >
+        <h2 id="tour-plan-heading" className={`${label} text-muted-foreground`}>
           Tour plan
         </h2>
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-          <p aria-live="polite" className="text-sm text-muted">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p aria-live="polite" className="text-sm text-muted-foreground">
             {statusText}
           </p>
           {streaming && (
-            <button
-              type="button"
-              onClick={cancel}
-              className={`rounded-md border border-border px-3 py-1 text-sm font-medium hover:bg-border/60 ${focusRing}`}
-            >
+            <Button type="button" variant="outline" onClick={cancel} className="border-input">
               Stop generating
-            </button>
+            </Button>
           )}
         </div>
 
         <div key={phase} className="mt-4 motion-safe:animate-fade-in">
-          {phase === "preparing" && <Skeleton />}
+          {phase === "preparing" && <TreeSkeleton />}
 
           {phase === "fetching" && treeTool?.state === "input-available" && (
             <div>
               <ul className="flex flex-wrap items-center gap-2" aria-label="Tool input">
                 {Object.entries(treeTool.input).map(([key, value]) => (
-                  <li
-                    key={key}
-                    className="rounded-full border border-accent px-2 py-0.5 font-mono text-xs break-all text-accent"
-                  >
-                    {key}: {value}
+                  <li key={key}>
+                    <Badge variant="outline">
+                      <span className="text-muted-foreground">{key}:</span> {value}
+                    </Badge>
                   </li>
                 ))}
               </ul>
-              <div className="mt-3 flex h-72 flex-col items-center justify-center gap-3 rounded-md border border-border">
-                <progress aria-label="Fetching file tree" className="h-1.5 w-1/2 accent-accent" />
-                <p className="text-sm text-muted">Reading the repository tree from GitHub…</p>
+              <div className="mt-3 flex h-60 flex-col items-center justify-center gap-3 rounded-lg border bg-background/60 sm:h-72">
+                <progress aria-label="Fetching file tree" className="h-1 w-1/2 accent-primary" />
+                <p className="text-sm text-muted-foreground">Reading the repository tree from GitHub…</p>
               </div>
             </div>
           )}
@@ -251,7 +251,7 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
       </section>
 
       {tree && (
-        <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-12">
           {/* The model can fail after the tree loaded (e.g. quota hit while planning). */}
           {errorMessage ? (
             <ErrorCard

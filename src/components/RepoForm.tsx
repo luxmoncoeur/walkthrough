@@ -2,12 +2,15 @@
 
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { parseRepoUrl } from "@/lib/parseRepoUrl";
 
 const EXAMPLES = ["vercel/next.js", "facebook/react", "sindresorhus/is"];
 
 const focusRing =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 export default function RepoForm() {
   const router = useRouter();
@@ -45,18 +48,13 @@ export default function RepoForm() {
   }
 
   return (
-    <>
-      <form
-        ref={formRef}
-        noValidate
-        onSubmit={handleSubmit}
-        className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-start"
-      >
-        <div className="min-w-0 flex-1 text-left">
-          <label htmlFor="repo" className="sr-only">
-            GitHub repository URL
-          </label>
-          <input
+    <div className="max-w-xl">
+      <form ref={formRef} noValidate onSubmit={handleSubmit}>
+        <label htmlFor="repo" className="sr-only">
+          GitHub repository URL
+        </label>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Input
             ref={inputRef}
             id="repo"
             name="repo"
@@ -64,37 +62,35 @@ export default function RepoForm() {
             inputMode="url"
             autoComplete="off"
             spellCheck={false}
-            placeholder="https://github.com/owner/repo"
+            placeholder="github.com/owner/repo"
             aria-invalid={error ? true : undefined}
             aria-describedby={error ? "repo-error" : undefined}
             onChange={(e) => handleChange(e.target.value)}
-            className={`w-full rounded-md border bg-background px-4 py-3 font-mono text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${error ? "border-danger" : "border-border"}`}
+            className="h-11 bg-card px-3.5 sm:flex-1 md:text-[0.9375rem]"
           />
-          {/* Always mounted so screen readers pick up changes to the live region. */}
-          <p
-            id="repo-error"
-            aria-live="polite"
-            className="mt-2 text-sm text-danger empty:hidden"
-          >
-            {error}
-          </p>
+          <Button type="submit" size="lg">
+            Generate tour
+            <ArrowRight data-icon="inline-end" aria-hidden="true" />
+          </Button>
         </div>
-        <button
-          type="submit"
-          className="rounded-md bg-accent px-5 py-3 font-medium text-accent-foreground hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        {/* Always mounted so screen readers pick up changes to the live region. */}
+        <p
+          id="repo-error"
+          aria-live="polite"
+          className="mt-2 text-sm text-destructive empty:hidden"
         >
-          Generate tour
-        </button>
+          {error}
+        </p>
       </form>
-      <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-sm">
-        <p className="text-muted">Try an example:</p>
-        <ul className="flex flex-wrap justify-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+        <h2 className="text-muted-foreground">Try</h2>
+        <ul className="flex flex-wrap gap-2">
           {EXAMPLES.map((repo) => (
             <li key={repo}>
               <button
                 type="button"
                 onClick={() => tryExample(repo)}
-                className={`rounded-full border border-border px-3 py-1 font-mono text-xs hover:border-accent hover:text-accent ${focusRing}`}
+                className={`rounded-md border bg-card/60 px-2.5 py-1 transition-colors hover:border-input hover:text-foreground text-muted-foreground ${focusRing}`}
               >
                 {repo}
               </button>
@@ -102,6 +98,6 @@ export default function RepoForm() {
           ))}
         </ul>
       </div>
-    </>
+    </div>
   );
 }

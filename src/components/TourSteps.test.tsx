@@ -18,7 +18,8 @@ describe("TourSteps", () => {
       <TourSteps steps={[steps[0], { reason: "no path yet" }]} final={false} onSelect={vi.fn()} />,
     );
     expect(screen.queryAllByRole("button")).toHaveLength(0);
-    expect(screen.getByText("1. index.ts")).toBeTruthy();
+    expect(screen.getByText("index.ts")).toBeTruthy();
+    expect(screen.getByText("src / ts")).toBeTruthy();
     expect(screen.queryByText("no path yet")).toBeNull();
     expect(container.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(3);
     await expectNoAxeViolations(container);
@@ -33,6 +34,8 @@ describe("TourSteps", () => {
     const [first, second] = screen.getAllByRole("button");
     expect(first.getAttribute("aria-current")).toBe("step");
     expect(second.getAttribute("aria-current")).toBeNull();
+    expect(screen.getByText("src/lib / ts")).toBeTruthy();
+    expect(screen.getByText("Stop 1 of 2")).toBeTruthy();
     expect(container.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(0);
     await user.click(second);
     expect(onSelect).toHaveBeenCalledWith("src/lib/util.ts");

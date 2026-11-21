@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { APICallError } from "ai";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -88,7 +88,7 @@ describe("TourPlanner", () => {
     chat.messages = assistant(treeDone, { type: "tool-planTour", state: "input-streaming", input: { steps: [steps[0]] } });
     const { container, rerender } = render(<TourPlanner owner="o" repo="r" />);
     expect(status().textContent).toBe("Loaded 2 files. Choosing where to start…");
-    expect(screen.getByText("1. a.ts")).toBeTruthy();
+    expect(within(screen.getByRole("navigation", { name: "Tour steps" })).getByText("a.ts")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Stop generating" })).toBeTruthy();
     await expectNoAxeViolations(container);
 
@@ -97,7 +97,7 @@ describe("TourPlanner", () => {
     rerender(<TourPlanner owner="o" repo="r" />);
     expect(status().textContent).toBe("Loaded 2 files. Tour ready: 2 steps.");
     expect(screen.queryByRole("button", { name: "Stop generating" })).toBeNull();
-    expect(screen.getByRole("button", { name: /1\. a\.ts/ }).getAttribute("aria-current")).toBe("step");
+    expect(screen.getByRole("button", { name: /^Stop 1:\s*a\.ts/ }).getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("region", { name: "Code" })).toBeTruthy();
     await expectNoAxeViolations(container);
   });

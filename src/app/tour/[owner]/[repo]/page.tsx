@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 async function TourHeading({ params }: { params: Params }) {
   const { owner, repo } = await params;
   return (
-    <h1 className="break-all font-mono text-2xl font-semibold tracking-tight">
+    <h1 className="mt-2 font-heading font-semibold text-4xl break-all sm:text-display-sm">
       {owner}/{repo}
     </h1>
   );
@@ -30,18 +30,18 @@ async function TourPlan({ params }: { params: Params }) {
 export default function TourPage({ params }: { params: Params }) {
   return (
     // min-h-dvh: the tour streams in taller than a screen, so start the footer below the fold instead of shoving it down (CLS).
-    <div className="min-h-dvh space-y-6">
+    <div className="min-h-dvh space-y-8 sm:space-y-12">
       <div>
-        <p className="text-sm text-muted">Tour of</p>
+        <p className="text-label font-medium text-muted-foreground uppercase">Tour of</p>
         <Suspense
-          fallback={<p className="h-8 w-48 rounded-md bg-border" aria-hidden="true" />}
+          fallback={<p className="mt-2 h-10 w-56 bg-muted sm:h-11" aria-hidden="true" />}
         >
           <TourHeading params={params} />
         </Suspense>
       </div>
 
       <Suspense
-        fallback={<div className="h-106 rounded-lg border border-border" aria-hidden="true" />}
+        fallback={<div className="h-106 border-t border-border" aria-hidden="true" />}
       >
         <TourPlan params={params} />
       </Suspense>
