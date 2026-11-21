@@ -10,7 +10,7 @@ Walkthrough generates interactive guided tours of a GitHub codebase. See README.
 
 - Next.js (App Router) + TypeScript (strict)
 - Tailwind CSS for all styling; no CSS-in-JS
-- Vercel AI SDK with Claude for generation; validate structured model output with Zod
+- Vercel AI SDK with Groq (`@ai-sdk/groq`) for generation; the model and its key name are constants at the top of `src/app/api/tour/route.ts`; validate tool input and structured model output with Zod
 - GitHub REST API for repo contents
 - Node.js LTS, npm
 
