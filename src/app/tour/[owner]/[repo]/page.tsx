@@ -1,13 +1,7 @@
 import { Suspense } from "react";
+import TourPlanner from "@/components/TourPlanner";
 
 type Params = Promise<{ owner: string; repo: string }>;
-
-const steps = [
-  { title: "Entry point", file: "src/app/layout.tsx" },
-  { title: "Home page", file: "src/app/page.tsx" },
-  { title: "Data fetching", file: "src/lib/github.ts" },
-  { title: "API route", file: "src/app/api/tour/route.ts" },
-];
 
 // Awaited inside <Suspense> because cacheComponents treats dynamic params as request-time data.
 async function TourHeading({ params }: { params: Params }) {
@@ -17,6 +11,12 @@ async function TourHeading({ params }: { params: Params }) {
       {owner}/{repo}
     </h1>
   );
+}
+
+async function TourPlan({ params }: { params: Params }) {
+  const { owner, repo } = await params;
+  // key: a new repo gets a fresh chat instead of reusing the previous one.
+  return <TourPlanner key={`${owner}/${repo}`} owner={owner} repo={repo} />;
 }
 
 export default function TourPage({ params }: { params: Params }) {
@@ -31,44 +31,11 @@ export default function TourPage({ params }: { params: Params }) {
         </Suspense>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <nav aria-label="Tour steps">
-          <ol className="space-y-2">
-            {steps.map((step, i) => (
-              <li
-                key={step.file}
-                aria-current={i === 0 ? "step" : undefined}
-                className={`rounded-md border p-3 ${i === 0 ? "border-accent" : "border-border"}`}
-              >
-                <p className="font-medium">
-                  {i + 1}. {step.title}
-                </p>
-                <p className="break-all font-mono text-xs text-muted">
-                  {step.file}
-                </p>
-              </li>
-            ))}
-          </ol>
-        </nav>
-
-        <section
-          aria-label="Code"
-          className="min-w-0 rounded-lg border border-border"
-        >
-          <p className="border-b border-border px-4 py-2 font-mono text-xs text-muted">
-            {steps[0].file}
-          </p>
-          <pre className="overflow-x-auto p-4 font-mono text-sm">
-            <code>{`export default function RootLayout({ children }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}`}</code>
-          </pre>
-        </section>
-      </div>
+      <Suspense
+        fallback={<div className="h-104 rounded-lg border border-border" aria-hidden="true" />}
+      >
+        <TourPlan params={params} />
+      </Suspense>
     </div>
   );
 }
