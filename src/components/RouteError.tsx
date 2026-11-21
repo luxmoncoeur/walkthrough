@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
-
-const button =
-  "rounded-md px-5 py-3 font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 /** Shared body of the route error boundaries. Never shows error details or stack traces. */
 export default function RouteError({
@@ -22,22 +21,18 @@ export default function RouteError({
   useEffect(() => console.error(error), [error]);
 
   return (
-    <section className="mx-auto max-w-md py-16 text-center">
-      <p className="font-mono text-sm text-danger">Error</p>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">{title}</h1>
-      <p className="mt-3 text-muted">{description}</p>
-      <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <button
-          type="button"
-          onClick={retry}
-          className={`${button} bg-accent text-accent-foreground hover:opacity-90`}
-        >
+    <Card className="max-w-xl gap-0 border-l-4 border-destructive px-6 py-6 sm:mt-8 sm:px-8 sm:py-8">
+      <p className="text-label font-medium text-destructive uppercase">Error</p>
+      <h1 className="mt-4 font-heading font-semibold text-display-sm text-balance">{title}</h1>
+      <p className="mt-4 text-pretty text-muted-foreground">{description}</p>
+      <div className="mt-8 flex flex-wrap items-center gap-3">
+        <Button type="button" onClick={retry} size="lg">
           Try again
-        </button>
-        <Link href="/" className={`${button} border border-border hover:bg-border/60`}>
+        </Button>
+        <Link href="/" className={buttonVariants({ variant: "outline", size: "lg", className: "border-input" })}>
           Back to home
         </Link>
       </div>
-    </section>
+    </Card>
   );
 }

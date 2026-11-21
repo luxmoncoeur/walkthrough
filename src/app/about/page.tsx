@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Card } from "@/components/ui/card";
 
 export const metadata: Metadata = {
   title: "How it works",
@@ -22,24 +23,20 @@ const steps = [
 
 export default function AboutPage() {
   return (
-    <section className="mx-auto max-w-2xl">
-      <h1 className="text-3xl font-semibold tracking-tight">How it works</h1>
-      <ol className="mt-8 space-y-4">
+    <section className="max-w-3xl">
+      <h1 className="font-heading font-semibold text-display-sm">How it works</h1>
+      <ol className="mt-10 space-y-3">
         {steps.map((step, i) => (
-          <li
-            key={step.title}
-            className="flex gap-4 rounded-lg border border-border p-5"
-          >
-            <span
-              aria-hidden="true"
-              className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent font-mono text-sm text-accent-foreground"
-            >
-              {i + 1}
-            </span>
-            <div>
-              <h2 className="font-medium">{step.title}</h2>
-              <p className="mt-1 text-muted">{step.body}</p>
-            </div>
+          <li key={step.title}>
+            <Card className="grid gap-x-8 gap-y-2 px-6 py-6 sm:grid-cols-[3rem_1fr]">
+              <span aria-hidden="true" className="inline-grid h-6 min-w-6 place-items-center rounded-md border px-1.5 text-xs font-medium tabular-nums w-fit border-primary/40 bg-primary/10 text-primary">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h2 className="font-heading font-semibold text-title">{step.title}</h2>
+                <p className="mt-2 max-w-[60ch] text-muted-foreground">{step.body}</p>
+              </div>
+            </Card>
           </li>
         ))}
       </ol>

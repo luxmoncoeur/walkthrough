@@ -51,3 +51,58 @@ The tour page calls the real model, so LCP/SI vary run to run with Groq latency.
 
 - Component tests (jsdom via per-file `// @vitest-environment jsdom`; lib tests stay on node): RepoForm, FileTree, TourSteps, CodePanel, TourPlanner (useChat mocked, fetch stubbed). 5 of 8 components; components folder 94.6% lines.
 - Untested components: Header, Footer, RouteError (static or near-static).
+
+## Redesign ("codebase as an exhibition")
+
+Same setup: Lighthouse 13.6.0, mobile preset, headless Chrome, `next build && next start` on port 3100, built from the working tree after the visual redesign.
+
+| Page | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | --- | --- |
+| `/` | 100 | 100 | 100 | 100 |
+| `/tour/sindresorhus/is` | 93 | 100 | 100 | 100 |
+
+| Page | FCP | LCP | TBT | CLS | Speed Index |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 0.8 s | 0.8 s | 10 ms | 0 | 0.8 s |
+| tour | 0.8 s | 3.2 s | 50 ms | 0.029 | 1.1 s |
+
+- Fonts: Instrument Serif 400, IBM Plex Sans 400/500 and IBM Plex Mono 400/500 via `next/font` (self-hosted, preloaded). Four woff2 files, ~75 KiB total. They replace Geist and Geist Mono.
+- Tour LCP is still bound to model latency: the serif `<h1>` paints at ~0.4 s in the trace, and the simulated 3.2 s follows the AI-written stops.
+- Contrast: every palette token was checked against paper `#f5f2ea` (ink 15.85, muted 6.39, faint 5.23, accent 7.11, danger 6.93, `rule-strong` 3.40 for meaningful borders). Shiki `github-light-high-contrast` token colors all pass on the new paper, except the pale "invalid" colors drawn on their own backgrounds (unchanged).
+
+## shadcn/ui pass
+
+Same setup, after moving the UI onto shadcn/ui (Base UI primitives: Button, Input, Badge, Card, Skeleton), with the same paper/ink/green palette on shadcn token names.
+
+| Page | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | --- | --- |
+| `/` | 100 | 100 | 100 | 100 |
+| `/tour/sindresorhus/is` (3 runs) | 90 / 89 / 90 | 100 | 100 | 100 |
+
+| Page | FCP | LCP | TBT | CLS | Speed Index |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 0.8 s | 0.8 s | 10 ms | 0 | 0.8 s |
+| tour (run 1) | 0.8 s | 3.6 s | 50 ms | 0.027 | 1.7 s |
+
+- Tour performance is at the 90 line. The LCP element is the first AI-written stop caption again (render delay ~3.3 s, waiting on Groq), as in the first audit. Unused JS is unchanged at ~94 KiB, so the Base UI components didn't add measurable client weight.
+- shadcn's `dark:` classes followed the OS setting (`prefers-color-scheme`), which turned the input gray for dark-mode users. `globals.css` now binds `dark:` to a `.dark` class that is never set.
+
+## Dark theme pass
+
+Same setup, after switching to one dark theme (`.dark` on `<html>`), Plus Jakarta Sans for headings and UI, JetBrains Mono for code only, the Shiki `github-dark-high-contrast` theme, and a ReactBits `BlurText` headline on home.
+
+| Page | Performance | Accessibility | Best practices | SEO |
+| --- | --- | --- | --- | --- |
+| `/` | 100 | 100 | 100 | 100 |
+| `/tour/sindresorhus/is` | 100 | 100 | 100 | 100 |
+
+| Page | FCP | LCP | TBT | CLS | Speed Index |
+| --- | --- | --- | --- | --- | --- |
+| `/` | 0.8 s | 0.8 s | 10 ms | 0 | 0.8 s |
+| tour | 0.8 s | 0.8 s | 10 ms | 0.027 | 1.5 s |
+
+- The tour's LCP element is now the `<h1>` (white heading on dark) instead of the AI-written caption, so Groq latency no longer drives LCP. Expect this to flip back if a caption ever outgrows the heading.
+- Unused JS: 54 KiB on home and 140 KiB on tour (was ~94 KiB), mostly `motion` from BlurText plus the AI SDK chunk.
+- Contrast (dark): every token was checked on background, card and muted surfaces; the lowest text pair is faint on muted at 4.97:1, and input borders are ≥3.52:1. Shiki `github-dark-high-contrast` token colors all pass on the card except one "invalid token" background swatch.
+- BlurText (ReactBits) was edited to render a `<span>` (valid inside `<h1>`) and to pass the React Compiler lint rules. It keeps the full text in an sr-only span and wraps motion in `MotionConfig reducedMotion="user"`.
+- Home redesigned in the reactbits.dev layout (compact two-line headline, form as the CTA, showcase panel with example code and tour windows). Lighthouse unchanged: `/` 100/100/100/100, tour 100/100/100/100.
