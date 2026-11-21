@@ -2,8 +2,8 @@ export type ParseRepoUrlResult =
   | { ok: true; owner: string; repo: string }
   | { ok: false; error: string };
 
-const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
-const REPO_RE = /^[A-Za-z0-9._-]{1,100}$/;
+export const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+export const REPO_RE = /^[A-Za-z0-9._-]{1,100}$/;
 const INVALID = "That doesn't look like a valid owner/repo.";
 
 export function parseRepoUrl(input: string): ParseRepoUrlResult {
