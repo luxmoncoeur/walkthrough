@@ -137,7 +137,7 @@ Defined in `src/lib/tools/planTour.ts`. The model records its picks here instead
 
 Not a model tool: the code panel calls it directly. Query: `owner`, `repo`, `ref` (branch), `path`. Paths must be relative with no empty, `.` or `..` segments.
 
-Returns JSON `{ html, truncated, empty }`: the file highlighted on the server with [Shiki](https://shiki.style) (`github-light` theme, language picked from the file extension, plain text if unknown). Files are cut at 200,000 characters (`truncated: true`). Shiki escapes the code, and the response is JSON rather than `text/html`, so untrusted repo content is never rendered as a page.
+Returns JSON `{ html, truncated, empty }`: the file highlighted on the server with [Shiki](https://shiki.style) (`github-light-high-contrast` theme, so every token meets WCAG AA contrast; language picked from the file extension, plain text if unknown). Files are cut at 200,000 characters (`truncated: true`). Shiki escapes the code, and the response is JSON rather than `text/html`, so untrusted repo content is never rendered as a page.
 
 | Status | Body |
 | --- | --- |

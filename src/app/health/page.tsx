@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-export const metadata: Metadata = { title: "Health" };
+export const metadata: Metadata = {
+  title: "Health",
+  description: "Live GitHub API rate limit and configuration status for Walkthrough.",
+};
 
 type RateLimit = { limit: number; remaining: number; reset: number };
 

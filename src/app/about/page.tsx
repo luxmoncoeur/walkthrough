@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "How it works" };
+export const metadata: Metadata = {
+  title: "How it works",
+  description: "How Walkthrough reads a GitHub repo, picks the files to start with, and turns them into a guided tour.",
+};
 
 const steps = [
   {

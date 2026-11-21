@@ -1,4 +1,5 @@
 import { APICallError, RetryError } from "ai";
+import { TOO_MANY } from "./rateLimit";
 
 export const OFFLINE = "You're offline. Reconnect and try again.";
 export const BUSY = "The AI is busy (free-tier limit). Wait a minute and retry.";
@@ -17,6 +18,8 @@ export function userMessage(error: unknown): string {
   const cause = RetryError.isInstance(error) ? error.lastError : error;
 
   if (APICallError.isInstance(cause)) {
+    // Our own per-IP limit: its body already says how long to wait.
+    if (cause.statusCode === 429 && cause.message.startsWith(TOO_MANY)) return cause.message;
     if (cause.statusCode === 429) return BUSY;
     if (cause.statusCode === 503) return OVERLOADED;
     if (cause.statusCode === 408 || cause.statusCode === 504) return TIMEOUT;

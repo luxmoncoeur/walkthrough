@@ -14,6 +14,7 @@ Status is as of FE-08. **Handled**: the user sees a specific, plain message and 
 | GitHub 404 | `/tour/vercel/does-not-exist-xyz` | "Repository not found or private." | Handled |
 | GitHub rate limit | Unset `GITHUB_TOKEN`, run more than 60 tours in an hour | "GitHub rate limit reached. Try again after HH:MM." | Handled |
 | Malformed tool output | `?sabotage=malformed` (model's paths rejected); a zod tool-input failure maps the same way | Tree stays; "The AI model didn't pick any files from the tree." Schema failures show "The AI returned the tour in the wrong format." | Handled |
+| Too many requests from one IP | More than 10 tours (or 60 file loads) in 10 minutes | "Too many requests from your network. Try again in N minutes." (HTTP 429 with `Retry-After`) | Partly: limits are in memory, per server instance |
 | Empty input on home | Submit the empty form | Inline "Paste a GitHub repository URL." with focus back on the field | Handled |
 | Empty first-run home | Open `/` | Pitch, the input, and three clickable example repos that fill and submit the form | Handled |
 | Repo with zero files after filtering | A repo with only images/lockfiles, or an empty repo (GitHub 409) | "This repo has no files we can tour: after skipping binaries, lockfiles and node_modules, nothing is left. Try another repo." | Handled |
@@ -27,7 +28,7 @@ Status is as of FE-08. **Handled**: the user sees a specific, plain message and 
 
 For testing and recording failure states without breaking anything for real.
 
-- Enable with `ENABLE_SABOTAGE=1` in `.env.local` (Development) or Vercel **Preview** env. **Never set it in Production.** Without it, the `sabotage` value is ignored and the request runs normally.
+- Enable with `ENABLE_SABOTAGE=1` in `.env.local` (Development) or Vercel **Preview** env. Without it, the `sabotage` value is ignored and the request runs normally. It can't turn on in Production: `sabotageMode()` ignores it when `VERCEL_ENV=production` and in any production build that isn't a Vercel Preview (including local `npm start`).
 - Use it by adding `?sabotage=<mode>` to a tour URL, e.g. `/tour/sindresorhus/is?sabotage=midstream`. `TourPlanner` forwards it in the request body to `POST /api/tour`. Only the first attempt is sabotaged; **Retry** sends `sabotage: null`, so the recovery path can be demonstrated. The gate is `sabotageMode()` in `src/lib/sabotage.ts`.
 
 | Mode | What the route does | What you should see |

@@ -45,11 +45,13 @@ function ErrorCard({
   note,
   retryLabel,
   onRetry,
+  focusRetry,
 }: {
   message: string;
   note?: string;
   retryLabel: string;
   onRetry: () => void;
+  focusRetry?: boolean;
 }) {
   return (
     <div className="flex flex-col items-start justify-center gap-3 rounded-md border border-danger p-5">
@@ -59,6 +61,8 @@ function ErrorCard({
       <button
         type="button"
         onClick={onRetry}
+        // After Stop, the Stop button unmounts; this keeps keyboard focus from falling to <body>.
+        autoFocus={focusRetry}
         className={`rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 ${focusRing}`}
       >
         {retryLabel}
@@ -71,15 +75,22 @@ const RETRY_LABEL = "Retry generating the tour";
 // Shown when retrying after partial output: there is no server-side stream store to resume from.
 const STARTS_OVER = "This starts over: it fetches the file tree again, then re-plans the tour.";
 const SLOW_AFTER_MS = 8_000;
+const STOPPED = "You stopped generating the tour.";
 
 export default function TourPlanner({ owner, repo }: { owner: string; repo: string }) {
   // The server ignores this unless ENABLE_SABOTAGE=1 (see docs/FAILURES.md).
   const sabotage = useSearchParams().get("sabotage") ?? undefined;
-  const { messages, sendMessage, regenerate, status, error } = useChat<TourMessage>({
+  const { messages, sendMessage, regenerate, stop, status, error } = useChat<TourMessage>({
     id: `tour:${owner}/${repo}`,
-    transport: new DefaultChatTransport({ api: "/api/tour", body: { owner, repo, sabotage } }),
+    transport: new DefaultChatTransport({
+      api: "/api/tour",
+      body: { owner, repo, sabotage },
+      // The server ignores the message history, so don't send it (keeps the body under the route's 10 KB cap).
+      prepareSendMessagesRequest: ({ body }) => ({ body: body ?? {} }),
+    }),
   });
   const [offline, setOffline] = useState(false);
+  const [stopped, setStopped] = useState(false);
   const [attempt, setAttempt] = useState(0);
 
   // Deferred one tick: Strict Mode's simulated unmount clears the first timer (and useChat's
@@ -98,6 +109,7 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
     if (retrying.current) return;
     if (!navigator.onLine) return setOffline(true);
     setOffline(false);
+    setStopped(false);
     setAttempt((n) => n + 1);
     retrying.current = true;
     // Sabotage hits the first attempt only; retries run clean so the recovery path can be shown.
@@ -111,6 +123,12 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
       retrying.current = false;
     });
   }
+
+  function cancel() {
+    setStopped(true);
+    void stop();
+  }
+  const streaming = (status === "submitted" || status === "streaming") && !stopped;
 
   const [selected, setSelected] = useState<string>();
 
@@ -134,7 +152,7 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
       ? "The AI finished without picking any files to tour."
       : undefined;
   const errorMessage =
-    (offline ? OFFLINE : undefined) ?? toolError ?? (error && userMessage(error)) ?? emptyFinish;
+    (offline ? OFFLINE : undefined) ?? (stopped ? STOPPED : undefined) ?? toolError ?? (error && userMessage(error)) ?? emptyFinish;
 
   // Steps stream in as the model writes the planTour input; the validated output replaces them.
   const draftSteps =
@@ -178,9 +196,20 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
         <h2 id="tour-plan-heading" className="text-lg font-semibold">
           Tour plan
         </h2>
-        <p aria-live="polite" className="mt-1 text-sm text-muted">
-          {statusText}
-        </p>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+          <p aria-live="polite" className="text-sm text-muted">
+            {statusText}
+          </p>
+          {streaming && (
+            <button
+              type="button"
+              onClick={cancel}
+              className={`rounded-md border border-border px-3 py-1 text-sm font-medium hover:bg-border/60 ${focusRing}`}
+            >
+              Stop generating
+            </button>
+          )}
+        </div>
 
         <div key={phase} className="mt-4 motion-safe:animate-fade-in">
           {phase === "preparing" && <Skeleton />}
@@ -210,7 +239,12 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
 
           {phase === "error" && errorMessage && (
             <div className="min-h-80">
-              <ErrorCard message={errorMessage} retryLabel={RETRY_LABEL} onRetry={retry} />
+              <ErrorCard
+                message={errorMessage}
+                retryLabel={RETRY_LABEL}
+                onRetry={retry}
+                focusRetry={stopped}
+              />
             </div>
           )}
         </div>
@@ -225,6 +259,7 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
               note={STARTS_OVER}
               retryLabel={RETRY_LABEL}
               onRetry={retry}
+              focusRetry={stopped}
             />
           ) : (
             <TourSteps

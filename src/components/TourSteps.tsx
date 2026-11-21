@@ -48,7 +48,8 @@ export default function TourSteps({
                   {body}
                 </button>
               ) : (
-                <div className={`${box} opacity-70`}>{body}</div>
+                // Dashed, not faded: opacity would drop the muted path text below AA contrast.
+                <div className={`${box} border-dashed`}>{body}</div>
               )}
             </li>
           );

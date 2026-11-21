@@ -1,5 +1,6 @@
 import { APICallError, RetryError } from "ai";
 import { describe, expect, it } from "vitest";
+import { TOO_MANY } from "./rateLimit";
 import { BUSY, GENERIC, MALFORMED, NETWORK, OVERLOADED, TIMEOUT, userMessage } from "./errors";
 
 const apiError = (statusCode: number, message = "Request failed") =>
@@ -11,6 +12,7 @@ const CONFIG =
 describe("userMessage", () => {
   const rows: [string, unknown, string][] = [
     ["provider 429", apiError(429), BUSY],
+    ["our per-IP 429 keeps its own text", apiError(429, `${TOO_MANY} Try again in 7 minutes.`), `${TOO_MANY} Try again in 7 minutes.`],
     ["429 wrapped in RetryError", new RetryError({ message: "x", reason: "maxRetriesExceeded", errors: [apiError(500), apiError(429)] }), BUSY],
     ["quota text without a status", new Error("You exceeded your current quota"), BUSY],
     ["rate limit text without a status", "Error: Rate limit reached for model", BUSY],

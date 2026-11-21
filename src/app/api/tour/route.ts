@@ -7,12 +7,18 @@ import {
   type UIMessageChunk,
 } from "ai";
 import { TIMEOUT, userMessage } from "@/lib/errors";
+import { createRateLimiter, rateLimit } from "@/lib/rateLimit";
 import { sabotageMode } from "@/lib/sabotage";
 import { repoInputSchema } from "@/lib/schemas";
 import { getRepoTree, type RepoTree } from "@/lib/tools/getRepoTree";
 import { planTour } from "@/lib/tools/planTour";
 
 export const maxDuration = 30;
+
+// Each request costs a model call; owner/repo length caps come from repoInputSchema.
+const limiter = createRateLimiter(10, 10 * 60_000);
+const MAX_BODY_BYTES = 10 * 1024;
+const tooLarge = () => new Response("That request is too large.", { status: 413 });
 
 // Swap provider/model here (and its key below). Free tier, supports tool calling (checked 2026-11).
 const MODEL = groq("openai/gpt-oss-120b");
@@ -36,8 +42,18 @@ const delay = (ms: number, signal: AbortSignal) =>
   });
 
 export async function POST(req: Request) {
-  // useChat also sends the message history; we ignore it and build the prompt from validated input only.
-  const body: unknown = await req.json().catch(() => null);
+  const limited = rateLimit(req, limiter);
+  if (limited) return limited;
+  if (Number(req.headers.get("content-length")) > MAX_BODY_BYTES) return tooLarge();
+  // content-length can be missing or wrong, so check what actually arrived too.
+  const raw = await req.text().catch(() => "");
+  if (new TextEncoder().encode(raw).length > MAX_BODY_BYTES) return tooLarge();
+
+  // The client sends only { owner, repo, sabotage }; the prompt is built from validated input only.
+  let body: unknown = null;
+  try {
+    body = JSON.parse(raw);
+  } catch {}
   const parsed = repoInputSchema.safeParse(body);
   if (!parsed.success) {
     return new Response("That doesn't look like a valid owner/repo.", { status: 400 });
@@ -49,8 +65,8 @@ export async function POST(req: Request) {
     );
   }
 
-  // Ignored unless ENABLE_SABOTAGE=1 (Preview/Development only). Modes: docs/FAILURES.md.
-  const sabotage = sabotageMode((body as { sabotage?: unknown }).sabotage, process.env.ENABLE_SABOTAGE);
+  // Ignored unless ENABLE_SABOTAGE=1, and never in Production. Modes: docs/FAILURES.md.
+  const sabotage = sabotageMode((body as { sabotage?: unknown }).sabotage, process.env);
   if (sabotage === "429") return new Response("Rate limit exceeded", { status: 429 });
   if (sabotage === "slow") await delay(8_000, req.signal);
 
