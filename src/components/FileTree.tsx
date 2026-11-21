@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 
 type Dir = { dirs: Map<string, Dir>; files: string[] };
 
@@ -29,11 +30,11 @@ type Selection = { selected?: string; onSelectFile?: (path: string) => void };
 type ListProps = Selection & { dir: Dir; depth: number; prefix: string };
 
 const rowFocus =
-  "rounded-sm hover:bg-border/60 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
+  "rounded-sm hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring";
 
 function DirList({ dir, depth, prefix, selected, onSelectFile }: ListProps) {
   return (
-    <ul className={depth > 0 ? "ml-4 border-l border-border pl-2" : undefined}>
+    <ul className={depth > 0 ? "ml-2 border-l border-border pl-2" : undefined}>
       {[...dir.dirs].map(([name, child]) => (
         <Folder
           key={name}
@@ -55,9 +56,13 @@ function DirList({ dir, depth, prefix, selected, onSelectFile }: ListProps) {
               title={path}
               aria-current={isSelected ? "true" : undefined}
               onClick={() => onSelectFile?.(path)}
-              className={`block w-full truncate py-0.5 pl-5 text-left ${rowFocus} ${isSelected ? "bg-accent/10 font-medium text-accent" : "text-foreground"}`}
+              className={`flex w-full items-center py-0.5 text-left ${rowFocus} ${isSelected ? "font-medium text-primary" : "text-foreground"}`}
             >
-              {name}
+              {/* Square marker: the selection isn't shown by color alone. */}
+              <span aria-hidden="true" className="flex w-5 shrink-0 justify-center">
+                {isSelected && <span className="size-1.5 bg-primary" />}
+              </span>
+              <span className="truncate">{name}</span>
             </button>
           </li>
         );
@@ -76,11 +81,11 @@ function Folder({ name, dir, depth, prefix, selected, onSelectFile }: ListProps 
         onClick={() => setOpen(!open)}
         className={`flex w-full items-center gap-1 py-0.5 text-left ${rowFocus}`}
       >
-        <span aria-hidden="true" className="w-4 text-muted">
+        <span aria-hidden="true" className="w-5 shrink-0 text-center text-faint">
           {open ? "▾" : "▸"}
         </span>
         <span className="truncate font-medium">{name}/</span>
-        <span className="ml-auto pl-2 text-xs text-muted">{countFiles(dir)}</span>
+        <span className="ml-auto pl-2 text-xs text-faint tabular-nums">{countFiles(dir)}</span>
       </button>
       {open && (
         <DirList
@@ -110,24 +115,24 @@ export default function FileTree({
 }) {
   return (
     <div>
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="font-medium">
+      <div className="flex flex-wrap items-center gap-2 tabular-nums">
+        <Badge variant="secondary">
           {totalFiles} {totalFiles === 1 ? "file" : "files"}
-        </span>
-        <span className="rounded-full border border-border px-2 py-0.5 font-mono text-xs text-muted">
+        </Badge>
+        <Badge variant="outline" className="text-muted-foreground">
           branch: {defaultBranch}
-        </span>
+        </Badge>
         {truncated && (
-          <span className="rounded-full bg-accent px-2 py-0.5 text-xs text-accent-foreground">
+          <Badge variant="outline" className="border-input">
             showing {files.length} of {totalFiles}
-          </span>
+          </Badge>
         )}
       </div>
       <div
         role="region"
         aria-label="Repository files"
         tabIndex={0}
-        className="mt-3 h-72 overflow-auto rounded-md border border-border p-2 font-mono text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="mt-3 h-60 overflow-auto rounded-lg border bg-background/60 p-2 text-sm sm:h-72 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <DirList
           dir={buildTree(files)}

@@ -196,3 +196,5 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+# Lighthouse reports (docs/AUDIT.md has the numbers)
+lighthouse-*.json

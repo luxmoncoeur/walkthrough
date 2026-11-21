@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type InferUITools, type UIDataTypes, type UIMessage } from "ai";
+import { OFFLINE, userMessage } from "@/lib/errors";
 import type { getRepoTree } from "@/lib/tools/getRepoTree";
 import type { planTour } from "@/lib/tools/planTour";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import CodePanel from "./CodePanel";
 import FileTree from "./FileTree";
 import TourSteps from "./TourSteps";
@@ -15,70 +21,116 @@ type TourMessage = UIMessage<
   InferUITools<{ getRepoTree: typeof getRepoTree; planTour: ReturnType<typeof planTour> }>
 >;
 
-// The SDK stringifies thrown Errors, so errorText arrives as "Error: <message>".
-const cleanError = (text: string) => text.replace(/^Error: /, "");
+const label = "text-label font-medium uppercase";
 
-const focusRing =
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
-
-function Skeleton() {
+function TreeSkeleton() {
   return (
     <div aria-hidden="true">
       <div className="flex gap-2">
-        <div className="h-5 w-16 rounded-full bg-border motion-safe:animate-pulse" />
-        <div className="h-5 w-28 rounded-full bg-border motion-safe:animate-pulse" />
+        <Skeleton className="h-5 w-16 rounded-4xl" />
+        <Skeleton className="h-5 w-28 rounded-4xl" />
       </div>
-      <div className="mt-3 h-72 space-y-2 rounded-md border border-border p-3">
+      <div className="mt-3 h-60 space-y-2.5 rounded-lg border bg-background/60 p-3 sm:h-72">
         {[60, 40, 75, 50, 35, 65, 45, 55].map((w, i) => (
-          <div
-            key={i}
-            className="h-4 rounded-sm bg-border motion-safe:animate-pulse"
-            style={{ width: `${w}%` }}
-          />
+          <Skeleton key={i} className="h-4" style={{ width: `${w}%` }} />
         ))}
       </div>
     </div>
   );
 }
 
-function ErrorCard({ message, onRetry }: { message: string; onRetry: () => void }) {
+function ErrorCard({
+  message,
+  note,
+  retryLabel,
+  onRetry,
+  focusRetry,
+}: {
+  message: string;
+  note?: string;
+  retryLabel: string;
+  onRetry: () => void;
+  focusRetry?: boolean;
+}) {
   return (
-    <div className="flex flex-col items-start justify-center gap-3 rounded-md border border-danger p-5">
-      <p className="font-medium text-danger">Something went wrong</p>
-      <p className="text-sm text-foreground">{message}</p>
-      <button
+    // Marked by the "Error" label and title, not just the red edge.
+    <Card className="items-start gap-3 border-l-4 border-destructive px-5 py-5">
+      <p className={`${label} text-destructive`}>Error</p>
+      <p className="font-heading font-semibold text-title">Something went wrong</p>
+      <p className="text-sm break-words text-foreground">{message}</p>
+      {note && <p className="text-sm text-muted-foreground">{note}</p>}
+      <Button
         type="button"
         onClick={onRetry}
-        className={`rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 ${focusRing}`}
+        // After Stop, the Stop button unmounts; this keeps keyboard focus from falling to <body>.
+        autoFocus={focusRetry}
+        size="lg"
+        className="mt-1"
       >
-        Retry
-      </button>
-    </div>
+        {retryLabel}
+      </Button>
+    </Card>
   );
 }
 
+const RETRY_LABEL = "Retry generating the tour";
+// Shown when retrying after partial output: there is no server-side stream store to resume from.
+const STARTS_OVER = "This starts over: it fetches the file tree again, then re-plans the tour.";
+const SLOW_AFTER_MS = 8_000;
+const STOPPED = "You stopped generating the tour.";
+
 export default function TourPlanner({ owner, repo }: { owner: string; repo: string }) {
-  const { messages, sendMessage, regenerate, status, error } = useChat<TourMessage>({
+  // The server ignores this unless ENABLE_SABOTAGE=1 (see docs/FAILURES.md).
+  const sabotage = useSearchParams().get("sabotage") ?? undefined;
+  const { messages, sendMessage, regenerate, stop, status, error } = useChat<TourMessage>({
     id: `tour:${owner}/${repo}`,
-    transport: new DefaultChatTransport({ api: "/api/tour", body: { owner, repo } }),
+    transport: new DefaultChatTransport({
+      api: "/api/tour",
+      body: { owner, repo, sabotage },
+      // The server ignores the message history, so don't send it (keeps the body under the route's 10 KB cap).
+      prepareSendMessagesRequest: ({ body }) => ({ body: body ?? {} }),
+    }),
   });
+  const [offline, setOffline] = useState(false);
+  const [stopped, setStopped] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   // Deferred one tick: Strict Mode's simulated unmount clears the first timer (and useChat's
   // cleanup calls chat.stop()), so exactly one request goes out, after the final mount.
   useEffect(() => {
-    const id = setTimeout(() => void sendMessage({ text: `Plan a tour of ${owner}/${repo}` }), 0);
+    const id = setTimeout(() => {
+      if (!navigator.onLine) return setOffline(true);
+      void sendMessage({ text: `Plan a tour of ${owner}/${repo}` });
+    }, 0);
     return () => clearTimeout(id);
   }, [sendMessage, owner, repo]);
 
-  // regenerate() is async and doesn't flip status synchronously, so lock against double clicks.
+  // sendMessage/regenerate are async and don't flip status synchronously, so lock against double clicks.
   const retrying = useRef(false);
   function retry() {
     if (retrying.current) return;
+    if (!navigator.onLine) return setOffline(true);
+    setOffline(false);
+    setStopped(false);
+    setAttempt((n) => n + 1);
     retrying.current = true;
-    void regenerate().finally(() => {
+    // Sabotage hits the first attempt only; retries run clean so the recovery path can be shown.
+    const options = { body: { sabotage: null } };
+    // Nothing sent yet (we were offline on mount) → first send; otherwise resend only the failed request.
+    const request =
+      messages.length === 0
+        ? sendMessage({ text: `Plan a tour of ${owner}/${repo}` }, options)
+        : regenerate(options);
+    void request.finally(() => {
       retrying.current = false;
     });
   }
+
+  function cancel() {
+    setStopped(true);
+    void stop();
+  }
+  const streaming = (status === "submitted" || status === "streaming") && !stopped;
 
   const [selected, setSelected] = useState<string>();
 
@@ -91,16 +143,18 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
   const plan = planTool?.state === "output-available" ? planTool.output : undefined;
   const toolError =
     treeTool?.state === "output-error"
-      ? cleanError(treeTool.errorText)
+      ? userMessage(treeTool.errorText)
       : planTool?.state === "output-error"
-        ? cleanError(planTool.errorText)
+        ? userMessage(planTool.errorText)
         : undefined;
-  // The stream can finish without a result (server timeout, or the model skipped a tool).
+  // Timeouts arrive as errors (the route converts them), so a clean finish without a plan means
+  // the model skipped a tool or wrote no steps.
   const emptyFinish =
     status === "ready" && assistant && !(tree && plan)
-      ? "The AI model didn't respond in time. It may be busy; try again."
+      ? "The AI finished without picking any files to tour."
       : undefined;
-  const errorMessage = toolError ?? error?.message ?? emptyFinish;
+  const errorMessage =
+    (offline ? OFFLINE : undefined) ?? (stopped ? STOPPED : undefined) ?? toolError ?? (error && userMessage(error)) ?? emptyFinish;
 
   // Steps stream in as the model writes the planTour input; the validated output replaces them.
   const draftSteps =
@@ -117,44 +171,64 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
         ? "fetching"
         : "preparing";
 
+  // One timer per waiting phase of each attempt; "slow" flips only if it is still showing after SLOW_AFTER_MS.
+  const waiting = !errorMessage && !plan ? `${attempt}:${phase}` : undefined;
+  const [slowPhase, setSlowPhase] = useState<string>();
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setTimeout(() => setSlowPhase(waiting), SLOW_AFTER_MS);
+    return () => clearTimeout(id);
+  }, [waiting]);
+  const slowNote =
+    waiting && slowPhase === waiting ? " Still working: big repos can take up to 25 seconds." : "";
+
   const statusText = errorMessage
     ? `Error: ${errorMessage}`
-    : phase === "preparing"
-      ? "Preparing request…"
-      : phase === "fetching"
-        ? `Fetching file tree for ${owner}/${repo}`
-        : plan
-          ? `Loaded ${tree!.totalFiles} files. Tour ready: ${plan.steps.length} steps.`
-          : `Loaded ${tree!.totalFiles} files. Choosing where to start…`;
+    : (phase === "preparing"
+        ? "Preparing request…"
+        : phase === "fetching"
+          ? `Fetching file tree for ${owner}/${repo}`
+          : plan
+            ? `Loaded ${tree!.totalFiles} files. Tour ready: ${plan.steps.length} steps.`
+            : `Loaded ${tree!.totalFiles} files. Choosing where to start…`) + slowNote;
 
   return (
-    <div className="space-y-6">
-      <section aria-labelledby="tour-plan-heading" className="rounded-lg border border-border p-4">
-        <h2 id="tour-plan-heading" className="text-lg font-semibold">
+    <div className="space-y-10 sm:space-y-12">
+      <section
+        aria-labelledby="tour-plan-heading"
+        className="rounded-xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6"
+      >
+        <h2 id="tour-plan-heading" className={`${label} text-muted-foreground`}>
           Tour plan
         </h2>
-        <p aria-live="polite" className="mt-1 text-sm text-muted">
-          {statusText}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {statusText}
+          </p>
+          {streaming && (
+            <Button type="button" variant="outline" onClick={cancel} className="border-input">
+              Stop generating
+            </Button>
+          )}
+        </div>
 
         <div key={phase} className="mt-4 motion-safe:animate-fade-in">
-          {phase === "preparing" && <Skeleton />}
+          {phase === "preparing" && <TreeSkeleton />}
 
           {phase === "fetching" && treeTool?.state === "input-available" && (
             <div>
               <ul className="flex flex-wrap items-center gap-2" aria-label="Tool input">
                 {Object.entries(treeTool.input).map(([key, value]) => (
-                  <li
-                    key={key}
-                    className="rounded-full border border-accent px-2 py-0.5 font-mono text-xs text-accent"
-                  >
-                    {key}: {value}
+                  <li key={key}>
+                    <Badge variant="outline">
+                      <span className="text-muted-foreground">{key}:</span> {value}
+                    </Badge>
                   </li>
                 ))}
               </ul>
-              <div className="mt-3 flex h-72 flex-col items-center justify-center gap-3 rounded-md border border-border">
-                <progress aria-label="Fetching file tree" className="h-1.5 w-1/2 accent-accent" />
-                <p className="text-sm text-muted">Reading the repository tree from GitHub…</p>
+              <div className="mt-3 flex h-60 flex-col items-center justify-center gap-3 rounded-lg border bg-background/60 sm:h-72">
+                <progress aria-label="Fetching file tree" className="h-1 w-1/2 accent-primary" />
+                <p className="text-sm text-muted-foreground">Reading the repository tree from GitHub…</p>
               </div>
             </div>
           )}
@@ -165,17 +239,28 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
 
           {phase === "error" && errorMessage && (
             <div className="min-h-80">
-              <ErrorCard message={errorMessage} onRetry={retry} />
+              <ErrorCard
+                message={errorMessage}
+                retryLabel={RETRY_LABEL}
+                onRetry={retry}
+                focusRetry={stopped}
+              />
             </div>
           )}
         </div>
       </section>
 
       {tree && (
-        <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        <div className="grid gap-10 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-12">
           {/* The model can fail after the tree loaded (e.g. quota hit while planning). */}
           {errorMessage ? (
-            <ErrorCard message={errorMessage} onRetry={retry} />
+            <ErrorCard
+              message={errorMessage}
+              note={STARTS_OVER}
+              retryLabel={RETRY_LABEL}
+              onRetry={retry}
+              focusRetry={stopped}
+            />
           ) : (
             <TourSteps
               steps={plan?.steps ?? draftSteps}
