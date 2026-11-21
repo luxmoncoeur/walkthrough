@@ -7,13 +7,14 @@ Walkthrough runs on Vercel. Production: <https://walkthrough-proj.vercel.app>
 1. Import the GitHub repo in Vercel. Framework preset: **Next.js**. Keep the default build command (`next build`), output settings and install command (`npm install`).
 2. Add environment variables (**Settings → Environment Variables**):
 
-   | Variable | Production | Preview | Development | Notes |
-   | --- | --- | --- | --- | --- |
-   | `GROQ_API_KEY` | ✅ | ✅ | optional | Required for tour generation. Without it the tour shows "The AI provider isn't configured." |
-   | `GITHUB_TOKEN` | ✅ | ✅ | optional | Raises the GitHub API limit from 60 to 5,000 requests per hour, shared by all users of that deployment. |
-   | `ENABLE_SABOTAGE` | ❌ | ✅ (`1`) | optional | Turns on `?sabotage=` failure modes ([FAILURES.md](FAILURES.md)). The code ignores it when `VERCEL_ENV=production`, but don't set it there anyway. |
+   | Variable          | Production | Preview  | Development | Notes                                                                                                                                              |
+   | ----------------- | ---------- | -------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `GROQ_API_KEY`    | ✅         | ✅       | optional    | Required for tour generation. Without it the tour shows "The AI provider isn't configured."                                                        |
+   | `GITHUB_TOKEN`    | ✅         | ✅       | optional    | Raises the GitHub API limit from 60 to 5,000 requests per hour, shared by all users of that deployment.                                            |
+   | `ENABLE_SABOTAGE` | ❌         | ✅ (`1`) | optional    | Turns on `?sabotage=` failure modes ([FAILURES.md](FAILURES.md)). The code ignores it when `VERCEL_ENV=production`, but don't set it there anyway. |
 
    For local development, put the same values in `.env.local` (gitignored).
+
 3. Env var changes only apply to new deployments. After changing one, redeploy (**Deployments → ⋯ → Redeploy**).
 
 `/api/tour` sets `maxDuration = 30` seconds and stops the model itself after 25 seconds, so it fits Vercel's default function limit.
@@ -27,10 +28,10 @@ Walkthrough runs on Vercel. Production: <https://walkthrough-proj.vercel.app>
 
 ## Rate limits
 
-| Route | Limit per IP | Over the limit |
-| --- | --- | --- |
+| Route            | Limit per IP               | Over the limit                                                                                      |
+| ---------------- | -------------------------- | --------------------------------------------------------------------------------------------------- |
 | `POST /api/tour` | 10 requests per 10 minutes | 429 with `Retry-After` (seconds) and "Too many requests from your network. Try again in N minutes." |
-| `GET /api/file` | 60 requests per 10 minutes | Same |
+| `GET /api/file`  | 60 requests per 10 minutes | Same                                                                                                |
 
 The IP is the first `x-forwarded-for` entry, which Vercel sets. `/api/tour` also rejects bodies over 10 KB with 413.
 
@@ -61,10 +62,6 @@ Note: after an Instant Rollback, Vercel doesn't auto-assign new pushes to Produc
 
 ## Sign-off
 
-| | |
-| --- | --- |
-| Name | |
-| Date | |
-| Deployment URL / commit | |
-| Smoke tests checked by | |
-| Notes | |
+| Name | Gio Angelo Lat |
+| Date | 2026-11-21 |
+| Deployment URL / commit | https://walkthrough-proj.vercel.app (main, after merging PR #6) |
