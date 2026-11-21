@@ -47,6 +47,7 @@ npm run dev                  # http://localhost:3000
 | --- | --- | --- |
 | `GITHUB_TOKEN` | No | GitHub personal access token. Raises the GitHub API rate limit from 60 to 5,000 requests per hour. |
 | `GROQ_API_KEY` | Yes, for tour generation | Groq API key. Free key from [console.groq.com](https://console.groq.com). |
+| `ENABLE_SABOTAGE` | No (Preview/Development only) | Set to `1` to enable the `?sabotage=` failure-injection modes on the tour page. Never set it in Production. See [docs/FAILURES.md](docs/FAILURES.md). |
 
 ## Screens
 
