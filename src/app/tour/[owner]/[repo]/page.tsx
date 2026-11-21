@@ -32,7 +32,7 @@ export default function TourPage({ params }: { params: Params }) {
       </div>
 
       <Suspense
-        fallback={<div className="h-104 rounded-lg border border-border" aria-hidden="true" />}
+        fallback={<div className="h-106 rounded-lg border border-border" aria-hidden="true" />}
       >
         <TourPlan params={params} />
       </Suspense>

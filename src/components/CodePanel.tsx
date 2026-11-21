@@ -78,7 +78,7 @@ function FileView({ owner, repo, gitRef, path }: FileRef) {
               onClick={retry}
               className={`rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-foreground hover:opacity-90 ${focusRing}`}
             >
-              Retry
+              Retry loading this file
             </button>
           </div>
         )}
@@ -90,7 +90,7 @@ function FileView({ owner, repo, gitRef, path }: FileRef) {
               role="region"
               aria-label={`Contents of ${path}`}
               // Shiki's <pre> is already focusable (tabindex=0) and escapes the code server-side.
-              className="text-sm [&_pre]:max-h-[70vh] [&_pre]:min-h-96 [&_pre]:overflow-auto [&_pre]:bg-transparent! [&_pre]:p-4 [&_pre]:font-mono [&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2 [&_pre:focus-visible]:outline-accent"
+              className="text-sm [&_pre]:max-h-[70dvh] [&_pre]:min-h-96 [&_pre]:overflow-auto [&_pre]:bg-transparent! [&_pre]:p-4 [&_pre]:font-mono [&_pre:focus-visible]:outline-2 [&_pre:focus-visible]:-outline-offset-2 [&_pre:focus-visible]:outline-accent"
               dangerouslySetInnerHTML={{ __html: state.html }}
             />
           ))}
