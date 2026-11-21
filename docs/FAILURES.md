@@ -28,7 +28,7 @@ Status is as of FE-08. **Handled**: the user sees a specific, plain message and 
 For testing and recording failure states without breaking anything for real.
 
 - Enable with `ENABLE_SABOTAGE=1` in `.env.local` (Development) or Vercel **Preview** env. **Never set it in Production.** Without it, the `sabotage` value is ignored and the request runs normally.
-- Use it by adding `?sabotage=<mode>` to a tour URL, e.g. `/tour/sindresorhus/is?sabotage=midstream`. `TourPlanner` forwards it in the request body to `POST /api/tour`. The gate is `sabotageMode()` in `src/lib/sabotage.ts`.
+- Use it by adding `?sabotage=<mode>` to a tour URL, e.g. `/tour/sindresorhus/is?sabotage=midstream`. `TourPlanner` forwards it in the request body to `POST /api/tour`. Only the first attempt is sabotaged; **Retry** sends `sabotage: null`, so the recovery path can be demonstrated. The gate is `sabotageMode()` in `src/lib/sabotage.ts`.
 
 | Mode | What the route does | What you should see |
 | --- | --- | --- |

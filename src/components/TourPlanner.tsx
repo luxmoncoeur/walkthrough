@@ -100,11 +100,13 @@ export default function TourPlanner({ owner, repo }: { owner: string; repo: stri
     setOffline(false);
     setAttempt((n) => n + 1);
     retrying.current = true;
+    // Sabotage hits the first attempt only; retries run clean so the recovery path can be shown.
+    const options = { body: { sabotage: null } };
     // Nothing sent yet (we were offline on mount) → first send; otherwise resend only the failed request.
     const request =
       messages.length === 0
-        ? sendMessage({ text: `Plan a tour of ${owner}/${repo}` })
-        : regenerate();
+        ? sendMessage({ text: `Plan a tour of ${owner}/${repo}` }, options)
+        : regenerate(options);
     void request.finally(() => {
       retrying.current = false;
     });
