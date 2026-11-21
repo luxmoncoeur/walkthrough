@@ -1,32 +1,49 @@
 # Walkthrough
 
-AI-generated guided tours of any codebase.
+AI-generated guided tours of any public GitHub codebase.
 
-Point Walkthrough at a GitHub repo and it builds an interactive, step-by-step tour: it highlights files in a sensible order, explains each part in plain language, and traces how a request flows through the app.
+Paste a GitHub repo and Walkthrough reads its file tree, picks the 5–8 files a newcomer should read first, puts them in reading order with one sentence on why each matters, and opens each one in a syntax-highlighted code panel next to the tour. Built as the capstone for the FlyRank AI Internship (Frontend AI Engineering track).
 
-**Status:** in progress. Capstone for the FlyRank AI Internship (Frontend AI Engineering track).
+**Live:** <https://walkthrough-proj.vercel.app>
+
+| Home | Tour |
+| --- | --- |
+| ![Home page](docs/screenshots/home.jpeg) | ![Tour page](docs/screenshots/tour.jpeg) |
 
 ## Why
 
 - Groupmates inherit code they didn't write and don't know where to start.
 - Project defenses ask "explain this part," and reading a repo cold is slow.
-- READMEs say *what* a project is, rarely *how the code fits together*.
+- READMEs say *what* a project is, rarely *where to start reading*.
 
-## Planned features
+## Features
 
-- [x] Paste a public GitHub repo URL → fetch the file tree
-- [x] AI picks the important files and orders them into a tour
-- [ ] Step-by-step tour UI with syntax-highlighted code and focused line ranges (steps and a highlighted code panel work; no focused line ranges yet)
-- [ ] Streaming plain-language explanations per step
-- [ ] "Follow a request" mode: trace one feature end to end
-- [ ] Shareable tour links
+- Paste a repo as `owner/repo` or a full GitHub URL, or click one of the example repos on the home page. Inline validation errors, announced to screen readers.
+- Collapsible file tree of the repo's default branch, with `node_modules`, lockfiles and binaries filtered out (capped at 300 files).
+- AI-picked tour of 5–8 files in reading order, each with a short reason. Steps stream in as the model writes them.
+- Code panel: click a step, or any file in the tree, to open it highlighted on the server (Shiki, dark high-contrast theme). Step 1 opens automatically.
+- Clear loading, streaming, error and retry states: offline, dropped connection, AI busy or timed out, repo not found, GitHub rate limit, empty repo, bad model output. A **Stop generating** button cancels a tour in progress. Full list in [docs/FAILURES.md](docs/FAILURES.md).
+- Per-IP rate limits and request size caps on the API routes.
+- `/health` page with the live GitHub API rate limit and whether a token is configured.
+- Accessible: semantic HTML, keyboard navigation, visible focus, polite live-region status updates, animations off under `prefers-reduced-motion`. Lighthouse accessibility 100 on home and tour ([docs/AUDIT.md](docs/AUDIT.md)).
+
+## How it works
+
+1. **`getRepoTree`**: the tour route (`POST /api/tour`) forces the model to call this tool first. It fetches the default branch's file tree from the GitHub REST API, drops noise and returns up to 300 paths.
+2. **`planTour`**: the model is then forced to call this tool with its picks. The tool drops any path that isn't in the fetched tree, so the UI only gets real files. Both steps stream to the browser with the Vercel AI SDK.
+3. **Code panel**: when a step or file is selected, the browser calls `GET /api/file`, which fetches the file from GitHub and returns it highlighted with Shiki.
+
+All AI and GitHub calls run on the server. File paths from GitHub are treated as untrusted input in the prompt.
 
 ## Stack
 
-- Next.js (App Router) + TypeScript (strict)
-- Tailwind CSS
+- Next.js 16 (App Router) + TypeScript (strict), React 19 with the React Compiler
+- Tailwind CSS 4, shadcn/ui components on Base UI primitives, one dark theme (Plus Jakarta Sans, JetBrains Mono for code)
 - Vercel AI SDK with Groq (`openai/gpt-oss-120b`, free tier). The provider, model and key name are constants at the top of `src/app/api/tour/route.ts`, so swapping providers is a small, local change.
+- Zod for tool input and request validation
+- Shiki for server-side syntax highlighting
 - GitHub REST API for repo contents
+- Vitest, Testing Library and axe-core for tests
 - Deployed on Vercel
 
 ## Getting started
@@ -45,29 +62,46 @@ npm run dev                  # http://localhost:3000
 
 | Name | Required? | Purpose |
 | --- | --- | --- |
+| `GROQ_API_KEY` | Yes, for tour generation | Groq API key. Free key from [console.groq.com](https://console.groq.com). Without it, the tour shows a "provider isn't configured" message. |
 | `GITHUB_TOKEN` | No | GitHub personal access token. Raises the GitHub API rate limit from 60 to 5,000 requests per hour. |
-| `GROQ_API_KEY` | Yes, for tour generation | Groq API key. Free key from [console.groq.com](https://console.groq.com). |
-| `ENABLE_SABOTAGE` | No (Preview/Development only) | Set to `1` to enable the `?sabotage=` failure-injection modes on the tour page. Never set it in Production. See [docs/FAILURES.md](docs/FAILURES.md). |
+| `ENABLE_SABOTAGE` | No (Preview/Development only) | Set to `1` to enable the `?sabotage=` failure-injection modes on the tour page. Ignored in Production even if set. See [docs/FAILURES.md](docs/FAILURES.md). |
+
+### Scripts
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Start the dev server on port 3000 |
+| `npm run build` | Production build |
+| `npm test` | Run all Vitest tests once |
+| `npm run test:coverage` | Run tests with a V8 coverage report |
+| `npm run lint` | Run ESLint |
 
 ## Screens
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Home: one-line pitch and a GitHub repo URL input (placeholder form, no submit logic yet). |
-| `/tour/[owner]/[repo]` | Tour view. The model fetches the repo's file tree (shown as a collapsible tree) and picks 5–8 files to read first. Clicking a step, or any file in the tree, opens it in the code panel; step 1 opens automatically. |
+| `/` | Home: headline, the repo input with example repos, and a sample tour preview. |
+| `/tour/[owner]/[repo]` | Tour: file tree, AI-picked steps and the code panel. |
 | `/about` | How it works, in three steps. |
-| `/health` | Health check: live GitHub API rate limit (remaining / limit, reset time) and whether a token is configured. |
+| `/health` | Live GitHub API rate limit (remaining / limit, reset time) and whether a token is configured. |
 | any unknown route | Custom 404 page. |
 
 ## Tool contract
 
-The tour route (`POST /api/tour`, body `{ owner, repo }`) runs two forced steps: the model calls `getRepoTree`, then `planTour`. Both tools run on the server. If `getRepoTree` fails, the model skips `planTour` and replies with one sentence (the UI shows the tool's error instead).
+The tour route (`POST /api/tour`, body `{ owner, repo, sabotage? }`) runs two forced steps: the model calls `getRepoTree`, then `planTour`. Both tools run on the server. If `getRepoTree` fails, the model skips `planTour` and replies with one sentence (the UI shows the tool's error instead). The route stops the model after 25 seconds (`maxDuration` is 30).
+
+Before calling the model, the route checks:
+
+| Check | Response |
+| --- | --- |
+| More than 10 requests from one IP in 10 minutes | 429 with `Retry-After` (seconds): `Too many requests from your network. Try again in N minutes.` |
+| Body over 10 KB (by `content-length` or by the bytes actually read) | 413 `That request is too large.` |
+| Body isn't a valid `{ owner, repo }` | 400 `That doesn't look like a valid owner/repo.` |
+| `GROQ_API_KEY` not set | 500 `The AI provider isn't configured. Set GROQ_API_KEY in .env.local and restart the server.` |
 
 ### `getRepoTree`
 
 Defined in `src/lib/tools/getRepoTree.ts`.
-
-**Name:** `getRepoTree`
 
 **Input** (Zod, same rules as the home page form):
 
@@ -98,6 +132,7 @@ Filtered out: `node_modules/`, `.git/`, lockfiles, images, fonts and other binar
 | Cause | Message |
 | --- | --- |
 | 404 | `Repository not found or private.` |
+| 409 (empty repo), or nothing left after filtering | `This repo has no files we can tour: after skipping binaries, lockfiles and node_modules, nothing is left. Try another repo.` |
 | 403 with `x-ratelimit-remaining: 0`, or 429, with `x-ratelimit-reset` | `GitHub rate limit reached. Try again after HH:MM.` (server local time) |
 | Anything else, including network failures | `Couldn't reach GitHub.` |
 
@@ -135,15 +170,25 @@ Defined in `src/lib/tools/planTour.ts`. The model records its picks here instead
 
 ### File contents: `GET /api/file`
 
-Not a model tool: the code panel calls it directly. Query: `owner`, `repo`, `ref` (branch), `path`. Paths must be relative with no empty, `.` or `..` segments.
+Not a model tool: the code panel calls it directly. Query: `owner`, `repo`, `ref` (branch, up to 255 characters, no whitespace), `path` (up to 1,000 characters). Paths must be relative with no empty, `.` or `..` segments.
 
-Returns JSON `{ html, truncated, empty }`: the file highlighted on the server with [Shiki](https://shiki.style) (`github-light-high-contrast` theme, so every token meets WCAG AA contrast; language picked from the file extension, plain text if unknown). Files are cut at 200,000 characters (`truncated: true`). Shiki escapes the code, and the response is JSON rather than `text/html`, so untrusted repo content is never rendered as a page.
+Returns JSON `{ html, truncated, empty }`: the file highlighted on the server with [Shiki](https://shiki.style) (`github-dark-high-contrast` theme, so every token meets WCAG AA contrast on the code panel; language picked from the file extension, plain text if unknown). Files are cut at 200,000 characters (`truncated: true`). Responses are cached privately for 5 minutes (`cache-control: private, max-age=300`). Shiki escapes the code, and the response is JSON rather than `text/html`, so untrusted repo content is never rendered as a page.
 
 | Status | Body |
 | --- | --- |
 | 400 | `That file request isn't valid.` |
 | 404 | `File not found.` |
+| 429 | `Too many requests from your network. Try again in N minutes.` (more than 60 requests from one IP in 10 minutes; `Retry-After` header in seconds) |
 | 502 | The GitHub error message (rate limit or `Couldn't reach GitHub.`) |
+
+Rate limits on both routes are kept in memory per server instance, so they reset on a cold start and each instance counts separately. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+## Docs
+
+- [docs/AUDIT.md](docs/AUDIT.md): Lighthouse, accessibility, tests and coverage
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md): Vercel setup, smoke tests and rollback
+- [docs/FAILURES.md](docs/FAILURES.md): failure and edge cases, and the sabotage switch
+- [REFLECTION.md](REFLECTION.md): capstone reflection
 
 ## License
 
