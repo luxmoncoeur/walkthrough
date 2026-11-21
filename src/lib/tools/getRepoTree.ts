@@ -1,5 +1,5 @@
 import { tool } from "ai";
-import { encodePath, githubFetch } from "../github";
+import { EMPTY_REPO, encodePath, githubFetch } from "../github";
 import { repoInputSchema } from "../schemas";
 
 export const MAX_FILES = 300;
@@ -118,6 +118,8 @@ export const getRepoTree = tool({
     const tree: { tree: TreeEntry[]; truncated: boolean } = await (
       await githubFetch(`${base}/git/trees/${encodePath(default_branch)}?recursive=1`)
     ).json();
-    return { owner, repo, defaultBranch: default_branch, ...filterTree(tree.tree, tree.truncated) };
+    const filtered = filterTree(tree.tree, tree.truncated);
+    if (filtered.files.length === 0) throw new Error(EMPTY_REPO);
+    return { owner, repo, defaultBranch: default_branch, ...filtered };
   },
 });

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { githubErrorMessage } from "../github";
-import { MAX_FILES, filterTree, rank } from "./getRepoTree";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { EMPTY_REPO, githubErrorMessage } from "../github";
+import { MAX_FILES, filterTree, getRepoTree, rank } from "./getRepoTree";
 
 const blob = (path: string) => ({ path, type: "blob" });
 
@@ -113,10 +113,39 @@ describe("githubErrorMessage", () => {
     ["403 with quota left", 403, { "x-ratelimit-remaining": "42", "x-ratelimit-reset": reset }, UNREACHABLE],
     ["429 without reset", 429, {}, UNREACHABLE],
     ["500", 500, {}, UNREACHABLE],
-    ["409 (empty repo)", 409, {}, UNREACHABLE],
+    ["409 (empty repo)", 409, {}, EMPTY_REPO],
   ];
 
   it.each(rows)("%s", (_, status, headers, expected) => {
     expect(githubErrorMessage(status, new Headers(headers))).toBe(expected);
+  });
+});
+
+describe("getRepoTree empty-tree detection", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // Stubbed fetch: first call is the repo, second the tree. No real network.
+  function stubGitHub(tree: Response) {
+    const repo = Response.json({ default_branch: "main" });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(repo).mockResolvedValueOnce(tree));
+  }
+  const run = () =>
+    getRepoTree.execute!({ owner: "a", repo: "b" }, { toolCallId: "t", messages: [], context: {} });
+
+  const rows: [string, () => Response][] = [
+    ["only binaries and lockfiles", () => Response.json({ tree: [blob("logo.png"), blob("yarn.lock")], truncated: false })],
+    ["only directories", () => Response.json({ tree: [{ path: "src", type: "tree" }], truncated: false })],
+    ["no entries", () => Response.json({ tree: [], truncated: false })],
+    ["GitHub 409 (repo with no commits)", () => new Response("Git Repository is empty.", { status: 409 })],
+  ];
+
+  it.each(rows)("throws EMPTY_REPO for %s", async (_, tree) => {
+    stubGitHub(tree());
+    await expect(run()).rejects.toThrow(EMPTY_REPO);
+  });
+
+  it("returns the tree when at least one file survives filtering", async () => {
+    stubGitHub(Response.json({ tree: [blob("logo.png"), blob("src/index.ts")], truncated: false }));
+    await expect(run()).resolves.toMatchObject({ files: ["src/index.ts"], totalFiles: 1 });
   });
 });
