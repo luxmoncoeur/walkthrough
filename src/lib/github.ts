@@ -1,6 +1,11 @@
+export const EMPTY_REPO =
+  "This repo has no files we can tour: after skipping binaries, lockfiles and node_modules, nothing is left. Try another repo.";
+
 /** Maps a failed GitHub response to a message safe to show users. */
 export function githubErrorMessage(status: number, headers: Headers): string {
   if (status === 404) return "Repository not found or private.";
+  // GitHub answers 409 "Git Repository is empty" for the tree of a repo with no commits.
+  if (status === 409) return EMPTY_REPO;
   const reset = headers.get("x-ratelimit-reset");
   const limited =
     status === 429 || (status === 403 && headers.get("x-ratelimit-remaining") === "0");
