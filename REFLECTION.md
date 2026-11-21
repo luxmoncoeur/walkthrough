@@ -2,7 +2,7 @@
 
 ## What I built
 
-Walkthrough turns any public GitHub repo into a guided tour: the AI reads the file tree, picks 5–8 files in reading order, and explains why each one matters while the code opens beside it. I built it for students who inherit a groupmate's project or have to explain code during a defense, and it's live at https://walkthrough-proj.vercel.app with 191 tests and Lighthouse scores of 100.
+Walkthrough turns any public GitHub repo into a guided tour: the AI reads the file tree, picks 5–8 files in reading order, and explains why each one matters while the code opens beside it. I built it for students who inherit a groupmate's project or have to explain code during a defense, and it's live at https://walkthrough-proj.vercel.app with 191 tests, Lighthouse accessibility, best practices and SEO at 100, and performance at 95.
 
 ## What went well
 
@@ -10,7 +10,7 @@ I'm proudest of the pipeline from repo to tour. Instead of letting the model wri
 
 ## What was hard
 
-Error handling, testing and rate limiting took the longest. I wrote a 16-case failure inventory and added a Preview-only "sabotage" switch that forces failures, which exposed a bug where Retry kept resending the broken request. Rate limiting works, but it lives in memory and resets per server instance, so I documented that limit instead of hiding it.
+Error handling, testing and rate limiting took the longest. I wrote a 17-case failure inventory and added a Preview-only "sabotage" switch that forces failures, which exposed a bug where Retry kept resending the broken request. Rate limiting works, but it lives in memory and resets per server instance, so I documented that limit instead of hiding it.
 
 ## How I used AI (what worked and what didn't)
 
