@@ -23,5 +23,5 @@ export function languageFor(path: string): BundledLanguage | "text" {
  * No size guard: /api/file caps input at 200k chars, which Shiki handles in ~200ms (minified too).
  */
 export function highlight(code: string, path: string): Promise<string> {
-  return codeToHtml(code, { lang: languageFor(path), theme: "github-light-high-contrast" });
+  return codeToHtml(code, { lang: languageFor(path), theme: "github-dark-high-contrast" });
 }
